@@ -105,6 +105,7 @@ typedef RatingData = {
 	- Missing sustain notes sometimes causes them to get stuck
 	- Multiple NPCs with notes at the same time will bug out and behave incorrectly
 	- It is only 2028 NANO seconds faster
+	- The data in the arrays never move around. No shifts, inserts, splices, are required.
 
 	But these may or may not be fixed, no one under ANY circumstance should be using this fork of Assorion.
 */
