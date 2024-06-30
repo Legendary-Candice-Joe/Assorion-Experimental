@@ -67,7 +67,8 @@ typedef RatingData = {
 
 	With that last example you can see that the note window remains in place, which allows for it to work correctly even after popping.
 	With this system there are no useless condition checks; All the opponent's notes in the note list are the opponents, and all of the
-	player's notes in the their note list is the player's so we never have to check.
+	player's notes in the their note list is the player's so we never have to check. The data in the arrays also never have
+	move around. No shifts, inserts, splices, are required.
 
 	========================================= Input
 	The input is far simpler though still a little complicated to understand. It follows a similar principle to that last ones but in general is handled a
@@ -97,7 +98,7 @@ typedef RatingData = {
 	Then when that last note is in range to be hit it becomes this:
 	[→2, →5, →4, →3]
 
-	We rinse and repeat this process until the array is empty. This has benefits such as forcing the input to work correctly, is actually less error-prone.
+	We rinse and repeat this process until the array is empty. This has benefits such as forcing the input to work correctly, and is actually less error-prone.
 	Because it will always force us to check for the earliest note in the song (for that column) to be hit. I wouldn't call it 'faster' though, it is way more complex.
 
 	This whole system has bugs that I'm already aware of:
@@ -105,7 +106,6 @@ typedef RatingData = {
 	- Missing sustain notes sometimes causes them to get stuck
 	- Multiple NPCs with notes at the same time will bug out and behave incorrectly
 	- It is only 2028 NANO seconds faster
-	- The data in the arrays never move around. No shifts, inserts, splices, are required.
 
 	But these may or may not be fixed, no one under ANY circumstance should be using this fork of Assorion.
 */
