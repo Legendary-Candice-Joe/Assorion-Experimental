@@ -1,0 +1,46 @@
+Benchmarks for note handling:
+
+The benchmarks consist of playing a section of the test song in the base branch.
+Every frame, the specific piece of code for note handling is timed on how fast the
+code was executed; The final scores were detemermined by the average nanoseconds of
+3 games in total.
+
+Base branch (the one currently publicly avaliable) uses a note counting system. When
+a note is close enough to be on screen, it is added and the noteCount is increased
+which is an index into the total list of notes.
+
+Then there is a new trick. What if instead of unspawnNotes just containing every note
+in the song in order, instead we sort the array backwards which would put the first
+notes in the song towards the last index of the array. The very first index of unspawnNotes
+is reserved, and is equal to when the array was last popped. When a note is close enough
+to be on screen, it is added and then the first element of the array is set to unspawnNotes.pop()
+
+The input branch is a local branch designed for testing new inputs and handling in the engine.
+This branch handles notes entirely differently, instead of a note group determining what notes
+are looped through, there are 3 arrays of 4 arrays which are important. The first array contains
+4 arrays (to represent each column that notes can appear in) that contain all the notes
+that the opponent is supposed to hit throughout the whole song. The second is the same thing but
+exclusively for the player, the last array is only used for notes that are close enough to be
+hit by the input system. The last one is the simplest, as just like the branch above it has
+all the notes (sorted in to each separate column backwards) that the player hits. It will
+have a pop whenever a player hits or misses a note. The first two are difficult as they
+rely on a windowing system. I'll document this more in the source code itself.
+
+Anyway here are the benchmarks for how fast each of the note handling systems were!
+
+Base (Note Count):    8951 Nanoseconds
+Base (Backwards Pop): 8918 Nanoseconds +33
+Input (Note Windows): 6923 Nanoseconds +1995
+
+Input Branch is faster than Base (Note Count) by +2028 Nanoseconds!
+
+That's literally faster by 0.002 milliseconds. Which is such a micro optimization it simply
+is not worth implementing in other engines. There is also a hidden cost; It will only be
+truely faster if you have a chart with a lot of notes. If you have a section with no
+notes then it will actually take longer, likely due to needing a lot more conditions to
+setup, however if you do have a lot more notes it will be more worth it.
+
+To summarize, yes the over complicated approach was faster (be sheer average) but not
+worth it. In the first method, the highs are high and the lows are low. In the latter
+method, it's more even and the highs are not as high, but the lows are not as low, which
+means that in the end it is not worth the added complexity.

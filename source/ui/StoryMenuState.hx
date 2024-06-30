@@ -56,7 +56,7 @@ class StoryMenuState extends MenuTemplate
 			weekGraphic.updateHitbox();
 			weekGraphic.centerOrigin();
 			weekGraphic.scale.set(0.7, 0.7);
-			weekGraphic.antialiasing = Settings.pr.antialiasing;
+			weekGraphic.antialiasing = Settings.antialiasing;
 			weekGraphic.offset.x += 75;
 
 			pushObject(weekGraphic);
@@ -96,10 +96,10 @@ class StoryMenuState extends MenuTemplate
 	}
 
 	var leaving:Bool = false;
-	override function keyHit(ev:KeyboardEvent){
-		super.keyHit(ev);
+	override function keyHit(KC:KeyCode, mod:KeyModifier){
+		super.keyHit(KC, mod);
 
-		if(!ev.keyCode.hardCheck(Binds.UI_ACCEPT)) 
+		if(!KC.hardCheck(Binds.UI_ACCEPT)) 
 			return;
 
 		if(leaving){
@@ -175,7 +175,7 @@ class StoryMenuState extends MenuTemplate
 
 		var oldRef:FlxSprite = weekBG;
 		weekBG = new FlxSprite(640, 0).loadGraphic(Paths.lImage('storymenu/' + weekData[curSel].portrait));
-		weekBG.antialiasing = Settings.pr.antialiasing;
+		weekBG.antialiasing = Settings.antialiasing;
 		sAdd(weekBG);
 
 		if(oldRef == null) return;

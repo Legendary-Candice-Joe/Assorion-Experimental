@@ -55,13 +55,13 @@ class HistoryState extends MenuTemplate {
         sAdd(bottomBlack);
 		sAdd(descText);
     }
-    override function keyHit(ev:KeyboardEvent){
+    override function keyHit(KC:KeyCode, mod:KeyModifier){
         if(dontUpdate) 
             return;
 
-        super.keyHit(ev);
+        super.keyHit(KC, mod);
 
-        if(ev.keyCode.hardCheck(Binds.UI_ACCEPT))
+        if(KC.hardCheck(Binds.UI_ACCEPT))
             openSubState(new HistorySubstate(contents[curSel], this));
     }
 
@@ -124,8 +124,8 @@ class HistorySubstate extends MusicBeatSubstate {
             awesomeText.alpha += elapsed * 1.5;
     }
 
-    override public function keyHit(ev:KeyboardEvent){
-        if(!ev.keyCode.hardCheck(Binds.UI_BACK)) return;
+    override public function keyHit(KC:KeyCode, mod:KeyModifier){
+        if(!KC.hardCheck(Binds.UI_BACK)) return;
 
         leaving = true;
     }

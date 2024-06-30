@@ -58,7 +58,7 @@ class MainMenuState extends MusicBeatState
 			menuItem.screenCenter();
 			menuItem.scrollFactor.set();
 			menuItem.y += (i - Math.floor(optionList.length / 2) + (optionList.length & 0x01 == 0 ? 0.5 : 0)) * 160;
-			menuItem.antialiasing = Settings.pr.antialiasing;
+			menuItem.antialiasing = Settings.antialiasing;
 
 			menuItems.add(menuItem);
 		}
@@ -88,8 +88,8 @@ class MainMenuState extends MusicBeatState
 
 	var twns:Array<FlxTween> = [];
 	var leaving:Bool = false;
-	override public function keyHit(ev:KeyboardEvent){
-		var k = ev.keyCode.deepCheck([Binds.UI_U, Binds.UI_D, Binds.UI_ACCEPT, Binds.UI_BACK ]);
+	override public function keyHit(KC:KeyCode, mod:KeyModifier){
+		var k = KC.deepCheck([Binds.UI_U, Binds.UI_D, Binds.UI_ACCEPT, Binds.UI_BACK, [116] ]);
 
 		switch(k){
 			case 0, 1:
@@ -116,6 +116,8 @@ class MainMenuState extends MusicBeatState
 				FlxG.sound.play(Paths.lSound('ui/cancelMenu'));
 				MusicBeatState.changeState(new TitleState());
 				leaving = true;
+			case 4:
+				MusicBeatState.changeState(new ControlsState());
 		}
 	}
 

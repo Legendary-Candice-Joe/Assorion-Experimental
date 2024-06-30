@@ -16,8 +16,8 @@ class OffsetWizard extends MusicBeatState {
     var rootBeat:Int = 0;
 
     override public function create(){
-        prevOffset = Settings.pr.audio_offset;
-        Settings.pr.audio_offset = 0;
+        prevOffset = Settings.audio_offset;
+        Settings.audio_offset = 0;
 
         FlxG.sound.playMusic('assets/sounds/offset.${Paths.sndExt}');
         Song.musicSet(100);
@@ -74,17 +74,17 @@ class OffsetWizard extends MusicBeatState {
         rootBeat = Math.round(curBeat * 0.5);
     }
 
-    override public function keyHit(ev:KeyboardEvent){
-        if(ev.keyCode.deepCheck([ Binds.UI_ACCEPT, Binds.UI_BACK ]) != -1){
+    override public function keyHit(KC:KeyCode, mod:KeyModifier){
+        if(KC.deepCheck([ Binds.UI_ACCEPT, Binds.UI_BACK ]) != -1){
             FlxG.sound.music.stop();
             MusicBeatState.changeState(new OptionsState());
 
-            Settings.pr.audio_offset = prevOffset;
-            if(!ev.keyCode.hardCheck(Binds.UI_ACCEPT)) 
+            Settings.audio_offset = prevOffset;
+            if(!KC.hardCheck(Binds.UI_ACCEPT)) 
                 return;
 
-            Settings.pr.audio_offset = Math.round(curOffset);
-            Settings.flush();
+            Settings.audio_offset = Math.round(curOffset);
+            SettingsManager.flush();
 
             return;
         }

@@ -29,13 +29,13 @@ class Main extends Sprite
 	{
 		super();
 		
-		Settings.openSettings();
+		SettingsManager.openSettings();
 
 		// # add the game
 
 		var ldState:Class<FlxState> = 
 		#if desktop 
-		Settings.pr.launch_sprites ? ui.LoadingState : initState;
+		Settings.pre_caching ? ui.LoadingState : initState;
 		#else 
 		initState;
 		#end
@@ -48,10 +48,10 @@ class Main extends Sprite
 			gameHeight, 
 			ldState, 
 			#if (flixel < "5.0.0") 1, #end 
-			Settings.pr.framerate, 
-			Settings.pr.framerate, 
-			Settings.pr.skip_logo, 
-			Settings.pr.start_fullscreen
+			Settings.framerate, 
+			Settings.framerate, 
+			Settings.skip_splash, 
+			Settings.start_fullscreen
 		));
 
 		addChild(fpsC);
@@ -60,7 +60,7 @@ class Main extends Sprite
 		#if (!desktop)
 		// web browser keyboard fix. Keys like the spacebar won't work in a browser without this.
 		FlxG.keys.preventDefaultKeys = [];
-		Settings.pr.framerate = 60;
+		Settings.framerate = 60;
 		#end
 		
 		// I have to give credit to Psych Engine here.
@@ -69,7 +69,7 @@ class Main extends Sprite
 		Lib.current.stage.window.setIcon(lime.graphics.Image.fromFile("assets/images/icon.png"));
 		#end
 		
-		Settings.apply();
+		SettingsManager.apply();
 		FlxG.mouse.visible = false;
 	}
 }

@@ -65,14 +65,14 @@ class TitleState extends MusicBeatState
 	{
 		if (!initialized)
 		{
-			FlxG.sound.volume = Settings.pr.start_volume / 100;
+			FlxG.sound.volume = Settings.start_volume / 100;
 			FlxG.sound.music.volume = 0;
 			sndTween = FlxTween.tween(FlxG.sound.music, {volume: 1}, 3);
 		}
 
 		logoBl = new FlxSprite(-150, -100);
 		logoBl.frames = Paths.lSparrow('ui/logoBumpin');
-		logoBl.antialiasing = Settings.pr.antialiasing;
+		logoBl.antialiasing = Settings.antialiasing;
 		logoBl.animation.addByPrefix('bump', 'logo bumpin', 24);
 		logoBl.updateHitbox();
 
@@ -80,13 +80,13 @@ class TitleState extends MusicBeatState
 		gfDance.frames = Paths.lSparrow('ui/gfDanceTitle');
 		gfDance.animation.addByIndices('danceLeft', 'gfDance', [30, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], "", 24, false);
 		gfDance.animation.addByIndices('danceRight', 'gfDance', [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29], "", 24, false);
-		gfDance.antialiasing = Settings.pr.antialiasing;
+		gfDance.antialiasing = Settings.antialiasing;
 
 		titleText = new FlxSprite(100, FlxG.height * 0.8);
 		titleText.frames = Paths.lSparrow('ui/titleEnter');
 		titleText.animation.addByPrefix('idle', "Press Enter to Begin", 24);
 		titleText.animation.addByPrefix('press', "ENTER PRESSED", 24);
-		titleText.antialiasing = Settings.pr.antialiasing;
+		titleText.antialiasing = Settings.antialiasing;
 		titleText.updateHitbox();
 
 		// # for the ending card
@@ -108,8 +108,8 @@ class TitleState extends MusicBeatState
 	// # Input code
 
 	private var leaving:Bool = false;
-	override public function keyHit(ev:KeyboardEvent){
-		if(!ev.keyCode.hardCheck(Binds.UI_ACCEPT)) return;
+	override public function keyHit(KC:KeyCode, mod:KeyModifier){
+		if(!KC.hardCheck(Binds.UI_ACCEPT)) return;
 
 		if(leaving) {
 			execEvents();

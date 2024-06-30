@@ -9,84 +9,109 @@ import flixel.util.FlxSave;
 
 using StringTools;
 
-typedef Options = {
-    var start_fullscreen:Bool;
-    var start_volume:Int;
-    var skip_logo:Bool;
-    var default_persist:Bool;
-    var launch_sprites:Bool;
+/*
+    Settings handling experimental change. Here the settings work a little differently.
+    Normally in base Assorion they are a struct where the defaults are loaded from a JSON file.
 
-    var downscroll:Bool;
-    var audio_offset:Int;
-    var input_offset:Int;
-    var botplay:Bool;
-    var ghost_tapping:Bool;
+    The settings use reflection to check to make sure the settings struct contains the correct values
+    to the ones stored in the save data. However this system has a few benefits:
+    - No default settings JSON needed
+    - No need to reference Settings.pr when looking for an option
+    - Defaults are stored right here.
 
-    var useful_info:Bool;
-    var antialiasing:Bool;
-    var show_hud:Bool;
-    var framerate:Int;
+    The settings now work not by using a struct, but instead by storing a class with a ton of static variables
+    which contain the default settings. This is similar to Psych Engine's ClientPrefs but there's a bit of a difference.
+
+    There is a Settings class which ONLY contains the settings as static variables. Then there is the SettingsManager (formerly settings)
+    which handles loading, applying, and saving all of the settings stored in the class.
+
+    The save data is also handled a little differently as well believe it or not. Before the settings were a structure,
+    and you can simply just save the structure directly in the 'gSave' variable. Here it's a little different. Instead
+    the settings are saving in a map but through the use of reflection, the map is translated in to the variables for the
+    Settings class. 
+
+    The flush function also has to do some extra logic to read all of the variables from the Settings class and translate
+    them back into the map to be saved. One of the main downsides is that unless the map is set to null, then the
+    map still exists which is not very efficient. Perhaps this may change in an update.
+
+*/
+class Settings {
+    public static var start_fullscreen:Bool = false;
+    public static var start_volume:Int      = 100;
+    public static var skip_splash:Bool      = false;
+    public static var default_persist:Bool  = false;
+    public static var pre_caching:Bool      = false;
+
+    public static var downscroll:Bool    = true;
+    public static var audio_offset:Int   = 75;
+    public static var input_offset:Int   = 0;
+    public static var botplay:Bool       = false;
+    public static var ghost_tapping:Bool = true;
+
+    public static var useful_info:Bool   = true;
+    public static var antialiasing:Bool  = true;
+    public static var show_hud:Bool      = true;
+    public static var framerate:Int      = 120;
 
     // controls :(
-    var note_left :Array<Int>;
-    var note_right:Array<Int>;
-    var note_up   :Array<Int>;
-    var note_down :Array<Int>;
+    public static var note_left :Array<Int> = [KeyCode.A, KeyCode.LEFT];
+    public static var note_right:Array<Int> = [KeyCode.D, KeyCode.RIGHT];
+    public static var note_up   :Array<Int> = [KeyCode.W, KeyCode.UP];
+    public static var note_down :Array<Int> = [KeyCode.S, KeyCode.DOWN];
     
-    var ui_left :Array<Int>;
-    var ui_right:Array<Int>;
-    var ui_up   :Array<Int>;
-    var ui_down :Array<Int>;
-    var ui_accept:Array<Int>;
-    var ui_back  :Array<Int>;
+    public static var ui_left :Array<Int>  = [KeyCode.A, KeyCode.LEFT];
+    public static var ui_right:Array<Int>  = [KeyCode.D, KeyCode.RIGHT];
+    public static var ui_up   :Array<Int>  = [KeyCode.W, KeyCode.UP];
+    public static var ui_down :Array<Int>  = [KeyCode.S, KeyCode.DOWN];
+    public static var ui_accept:Array<Int> = [KeyCode.RETURN, KeyCode.SPACE];
+    public static var ui_back  :Array<Int> = [KeyCode.ESCAPE, KeyCode.BACKSPACE];
 }
 
 #if !debug @:noDebug #end
-class Settings {
-    /*
-        Save data is loaded at the beginning of Titlestate.
-        Please remember that.
-    */
-
-    public static var pr:Options;
+class SettingsManager {
+    // We have to store all variables in a map, since otherwise there's no way to flush the values.
+    public static var gsTranslator:Map<String, Dynamic>;
     public static var gSave:FlxSave;
 
     public static function openSettings(){
-        var text = lime.utils.Assets.getText('assets/songs-data/default_settings.json').trim();
-        pr = cast Json.parse(text);
-
         gSave = new FlxSave();
-        gSave.bind('funkin', 'candicejoe');
+        gSave.bind('assorion', 'candicejoe');
 
-        if(gSave.data.fSettings != null){
-            var tmpPr:Options = cast gSave.data.fSettings;
-            var items:Array<String> = Reflect.fields(pr);
+        gsTranslator = gSave.data.settings == null ? new Map<String, Dynamic>() : gSave.data.settings;
 
-            for(i in 0...items.length)
-                if (Reflect.field   (tmpPr, items[i]) == null)
-                    Reflect.setField(tmpPr, items[i], 
-                    Reflect.field   (pr   , items[i]));
-
-            pr = tmpPr;
+        var settItems:Array<String> = Type.getClassFields(Settings);
+        for(k in gsTranslator.keys()){
+            if(settItems.contains(k)){
+                Reflect.setField(Settings, k, gsTranslator.get(k));
+                trace('Set $k to ${Reflect.field(Settings, k)}');
+            } else
+                trace('settItems did not contain: ${k}');
         }
 
-        pr.framerate = framerateClamp(pr.framerate);
+        trace('$gsTranslator');
+
+        Settings.framerate = framerateClamp(Settings.framerate);
         Binds.updateControls();
         Highscore.loadScores();
     }
     
     public static function apply(){
-        FlxGraphic.defaultPersist = pr.default_persist;
-        FlxG.updateFramerate = FlxG.drawFramerate = framerateClamp(pr.framerate);
+        FlxGraphic.defaultPersist = Settings.default_persist;
+        FlxG.updateFramerate = FlxG.drawFramerate = framerateClamp(Settings.framerate);
 
-        Main.changeUsefulInfo(pr.useful_info);
-        Paths.switchCacheOptions(pr.default_persist);
+        Main.changeUsefulInfo(Settings.useful_info);
+        Paths.switchCacheOptions(Settings.default_persist);
 
         Main.framerateDivision = 60 / FlxG.updateFramerate;
     }
 
     public inline static function flush(){
-        gSave.data.fSettings = pr;
+        var settItems:Array<String> = Type.getClassFields(Settings);
+        for(i in 0...settItems.length)
+            gsTranslator.set(settItems[i], Reflect.field(Settings, settItems[i]));
+            //Reflect.setField(gSave.data, settItems[i], Reflect.field(Settings, settItems[i]));
+
+        gSave.data.settings = gsTranslator;
         gSave.flush();
     }
 

@@ -97,7 +97,7 @@ class PauseSubState extends MusicBeatSubstate
 		var coolString:String = 
 		'SONG: ${PlayState.songName.toUpperCase()}' +
 		' | WEEK: ${PlayState.storyWeek >= 0 ? Std.string(PlayState.storyWeek + 1) : "FREEPLAY"}' +
-		' | BOTPLAY: ${Settings.pr.botplay ? "YES" : "NO"}' +
+		' | BOTPLAY: ${Settings.botplay ? "YES" : "NO"}' +
 		' | DIFFICULTY: ${CoolUtil.diffString(PlayState.curDifficulty, 1).toUpperCase()}' +
 		' | ';
 		pauseText.text = '$coolString$coolString$coolString';
@@ -128,20 +128,20 @@ class PauseSubState extends MusicBeatSubstate
 			if(FlxG.sound.music.time > 0){
 				pState.vocals.play();
 				FlxG.sound.music.play();
-				FlxG.sound.music.time = pState.vocals.time = Song.Position + Settings.pr.audio_offset;
+				FlxG.sound.music.time = pState.vocals.time = Song.Position + Settings.audio_offset;
 			}
 		}});
 	}
 
 	private var leaving:Bool = false;
-	override public function keyHit(ev:KeyboardEvent){
-		var t:Int = ev.keyCode.deepCheck([Binds.UI_U, Binds.UI_D]);
+	override public function keyHit(KC:KeyCode, mod:KeyModifier){
+		var t:Int = KC.deepCheck([Binds.UI_U, Binds.UI_D]);
 		if (t != -1){
 			changeSelection((t * 2) - 1);
 			return;
 		}
 
-		if(!ev.keyCode.hardCheck(Binds.UI_ACCEPT) || leaving) 
+		if(!KC.hardCheck(Binds.UI_ACCEPT) || leaving) 
 			return;
 
 		switch(curSelected){
@@ -152,7 +152,7 @@ class PauseSubState extends MusicBeatSubstate
 				NewTransition.skippedLast = true;
 				FlxG.resetState();
 			case 2:
-				Settings.pr.botplay = !Settings.pr.botplay;
+				Settings.botplay = !Settings.botplay;
 				alphaTexts[curSelected].obj.alpha = 0;
 				updatePauseText();
 

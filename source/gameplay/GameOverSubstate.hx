@@ -66,7 +66,7 @@ class GameOverSubstate extends MusicBeatSubstate
 	}
 
 	private var leaving:Bool = false;
-	override function keyHit(ev:KeyboardEvent){
+	override function keyHit(KC:KeyCode, mod:KeyModifier){
 		if(leaving) {
 			for(i in 0...events.length)
 				events[i].exeFunc();
@@ -74,14 +74,14 @@ class GameOverSubstate extends MusicBeatSubstate
 			return;
 		}
 
-		if(ev.keyCode.hardCheck(Binds.UI_BACK)){
+		if(KC.hardCheck(Binds.UI_BACK)){
 			leaving = true;
 			FlxG.sound.music.stop();
 			CoolUtil.exitPlaystate();
 			return;
 		}
 
-		if(!ev.keyCode.hardCheck(Binds.UI_ACCEPT)) return;
+		if(!KC.hardCheck(Binds.UI_ACCEPT)) return;
 
 		leaving = true;
 		charRef.playAnim('deathConfirm');

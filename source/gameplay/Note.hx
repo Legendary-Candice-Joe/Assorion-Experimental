@@ -71,7 +71,7 @@ class Note extends StaticSprite
 			return;
 
 		alpha = 0.6;
-		flipY = Settings.pr.downscroll;
+		flipY = Settings.downscroll;
 		offsetX += width / 2;
 		var defaultOffset = (flipY ? -7 : 7) * PlayState.SONG.speed;
 

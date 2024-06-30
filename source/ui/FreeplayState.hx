@@ -91,10 +91,10 @@ class FreeplayState extends MenuTemplate
 
 	private var prevTime:Float = 0;
 	private var playing:Bool = true;
-	override public function keyHit(ev:KeyboardEvent){
-		super.keyHit(ev);
+	override public function keyHit(KC:KeyCode, mod:KeyModifier){
+		super.keyHit(KC, mod);
 
-		var k = ev.keyCode.deepCheck([Binds.UI_ACCEPT, [FlxKey.SPACE]]);
+		var k = KC.deepCheck([Binds.UI_ACCEPT, [FlxKey.SPACE]]);
 		switch(k){
 			case 0: // Enter
 				if(NewTransition.skip()) 

@@ -48,7 +48,7 @@ class Song
 		BPM         = tempo;
 		Crochet     = newCrochet * 4;
 		StepCrochet = newCrochet;
-		Position    = -Settings.pr.audio_offset;
+		Position    = -Settings.audio_offset;
 		Division    = 1 / newCrochet;
 	}
 

@@ -46,7 +46,7 @@ class Paths {
     */
 
     public static inline function clearCache(){
-        if(Settings.pr.default_persist || Settings.pr.launch_sprites) 
+        if(Settings.default_persist || Settings.pre_caching) 
             return;
 
 		Assets.cache.clear();

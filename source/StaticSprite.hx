@@ -10,7 +10,7 @@ class StaticSprite extends FlxSprite {
         super(x,y,null);
 
         active = false;
-        antialiasing = Settings.pr.antialiasing;
+        antialiasing = Settings.antialiasing;
     }
     override public function update(elasped){
 

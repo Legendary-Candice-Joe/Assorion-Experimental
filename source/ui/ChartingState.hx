@@ -220,31 +220,33 @@ class ChartingState extends MusicBeatState {
 
     private var holdingControl:Bool = false;
     private var holdingShift:Bool   = false;
-    override function keyHit(ev:KeyboardEvent){
-        var key = ev.keyCode;
+    override function keyHit(KC:KeyCode, mod:KeyModifier){
+        var key:Int = KC;
+
+        trace(KC);
 
         if (currentElement != null){
-            key == FlxKey.ENTER ? currentElement.forceExit() : currentElement.keyInsert(key);
+            key == KeyCode.RETURN ? currentElement.forceExit() : currentElement.keyInsert(key);
             return;
         }
 
-        if(key == FlxKey.SHIFT){
+        if(mod.shiftKey){
             holdingShift = true;
             return;
         }
 
         // ONLY FOR CONTROL. READ AHEAD!
 
-        if(holdingControl){
+        if(mod.ctrlKey){
             var T:Int = key.deepCheck([
-                [FlxKey.J],
-                [FlxKey.L],
-                [FlxKey.I],
-                [FlxKey.K],
+                [KeyCode.J],
+                [KeyCode.L],
+                [KeyCode.I],
+                [KeyCode.K],
 
-                [FlxKey.C],
-                [FlxKey.V],
-                [FlxKey.A]
+                [KeyCode.C],
+                [KeyCode.V],
+                [KeyCode.A]
             ]);
 
             switch(T){
@@ -303,22 +305,22 @@ class ChartingState extends MusicBeatState {
 
         var T:Int = key.deepCheck([ 
             Binds.UI_BACK, 
-            [FlxKey.ESCAPE, FlxKey.ENTER], 
-            [FlxKey.SPACE],
+            [KeyCode.ESCAPE, KeyCode.RETURN], 
+            [KeyCode.SPACE],
             Binds.UI_L, 
             Binds.UI_R, 
-            [FlxKey.B],
-            [FlxKey.N], 
-            [FlxKey.Q],
-            [FlxKey.E],
-            [FlxKey.X],
-            [FlxKey.Z],
-            [FlxKey.CONTROL],
+            [KeyCode.B],
+            [KeyCode.N], 
+            [KeyCode.Q],
+            [KeyCode.E],
+            [KeyCode.X],
+            [KeyCode.Z],
+            [KeyCode.LEFT_CTRL],
             // Numbers 1 - 4
-            [FlxKey.ONE], 
-            [FlxKey.TWO], 
-            [FlxKey.THREE], 
-            [FlxKey.FOUR]
+            [KeyCode.NUMBER_1], 
+            [KeyCode.NUMBER_2], 
+            [KeyCode.NUMBER_3], 
+            [KeyCode.NUMBER_4]
         ]);
 
         switch(T){
@@ -358,7 +360,7 @@ class ChartingState extends MusicBeatState {
                     vocals.play();
                     vocals.time = FlxG.sound.music.time;
 
-                    Song.Position = FlxG.sound.music.time - Settings.pr.audio_offset;
+                    Song.Position = FlxG.sound.music.time - Settings.audio_offset;
                 }
                 return;
             case 3, 4:
@@ -366,14 +368,14 @@ class ChartingState extends MusicBeatState {
                 changeSec(curSec + (((T - 3) * 2) - 1));
 
                 var offTime = curSec * Song.Crochet * 4;
-                    offTime += Settings.pr.audio_offset;
+                    offTime += Settings.audio_offset;
 
                 // this is to make sure there are no trashy rounding errors.
-                while(Math.floor((offTime + Settings.pr.audio_offset) / (Song.Crochet * 4)) < curSec)
+                while(Math.floor((offTime + Settings.audio_offset) / (Song.Crochet * 4)) < curSec)
                     offTime += 0.011;
 
                 Song.Position = vocals.time = FlxG.sound.music.time = offTime;
-                Song.Position -= Settings.pr.audio_offset;
+                Song.Position -= Settings.audio_offset;
 
                 expandCheck();
                 reloadNotes();
@@ -408,19 +410,23 @@ class ChartingState extends MusicBeatState {
                 [createSongUI, createCharUI, createSecUI, createInfoUI][T - 12]();
         }
     }
-    override public function keyRel(ev:KeyboardEvent){
-        if(ev.keyCode == FlxKey.CONTROL)
+    override public function keyRel(KC:KeyCode, mod:KeyModifier){
+        if(!mod.shiftKey)
             holdingControl = false;
 
-        if(ev.keyCode == FlxKey.SHIFT)
+        if(!mod.ctrlKey)
             holdingShift = false;
     }
 
     // # Note rendering code.
 
     public inline function reloadNotes(){
+        var nCount:Int = 0;
+
         notes.clear();
         for(newnote in song.notes[curSec].sectionNotes){
+            ++nCount;
+
             var daNote = new Note(newnote[0], newnote[1], newnote[4]);
             daNote.setGraphicSize(gridSize, gridSize);
             daNote.updateHitbox();
@@ -435,8 +441,10 @@ class ChartingState extends MusicBeatState {
             notes.add(daNote);
 
             for(i in 1...Math.floor((newnote[2] * zooms[curZoom]) + 1)){
+                ++nCount;
+
                 var susNote = new Note(newnote[0] + (i / zooms[curZoom]), newnote[1], newnote[4], true, i == Math.floor(newnote[2]*zooms[curZoom]));
-                if(Settings.pr.downscroll)
+                if(Settings.downscroll)
                     susNote.flipY = false;
 
                 susNote.setGraphicSize(Std.int(gridSize / 2.5), gridSize);
@@ -449,6 +457,8 @@ class ChartingState extends MusicBeatState {
                 notes.add(susNote);
             }
         }
+
+        trace('NOTES: $nCount');
     }
 
     // # Note functions

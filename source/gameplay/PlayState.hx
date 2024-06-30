@@ -29,6 +29,86 @@ typedef RatingData = {
 	var value:Int;
 }
 
+/*
+	Note handling experimental change. This will certainly use more memory, and it is faster.
+	It will on average spend more time than the default, but when there are more notes it is overall faster.
+	So here I will document the change and how this new system works.
+
+	There's 2 parts to the notes:
+	- Rendering
+	- Input
+
+	========================================= Rendering
+	The rendering is composed of 2 sets of arrays which contain 4 arrays (to represent each column for the notes), one for opponents and one for the player.
+	For the sake of clarity, we'll call the array of arrays the "Note List", and we'll call each individual array in the note list, the "Note set".
+
+	The first index of each note set is a integer. This integer is called the "Note Window" and defaults to 1, however if it is one then there are no notes
+	in that note set. The rest of the note set will contain each note in that column that will appear in that song, but sorted backwards so the earliest notes
+	go later in the array; Sorting the array backwards allows us to use a pop() which is faster than a shift() or splice().
+
+	Every frame the index which is determined by the note set length - note window is checked to see if it can be spawned in, if it can be, then the note
+	window increases and it gets added to the note group. A bit later in the frame it loops through every note in the note window backwards. So lets get
+	a graphical example.
+
+	Here the note set for the down column will look like this (↑ used to represent a note and | to represent the note window)
+	In this scenario no notes have spawned in and the last note in the array will be checked to see if it can spawn in.
+	[1, ↓, ↓, ↓, ↓, ↓, ↓|]
+
+	Here is the next frame, where we can imagine that the last note can spawn in.
+	As you can see, the note window at the start has increased, and all the notes in the note window will be handled.
+	[2, ↓, ↓, ↓, ↓, ↓|, ↓]
+
+	Here is yet another frame later in the song, where 3 notes in the down column have spawned in.
+	3 of these notes will be managed to be scrolled down and so on.
+	[4, ↓|, ↓, ↓, ↓]
+
+	When the last note needs to be killed, we pop() the array, and decrease the note window at the same time:
+	[3, ↓|, ↓, ↓]
+
+	With that last example you can see that the note window remains in place, which allows for it to work correctly even after popping.
+	With this system there are no useless condition checks; All the opponent's notes in the note list are the opponents, and all of the
+	player's notes in the their note list is the player's so we never have to check.
+
+	========================================= Input
+	The input is far simpler though still a little complicated to understand. It follows a similar principle to that last ones but in general is handled a
+	little differently in terms of how the array works. So once again we will use examples to show how this works as well as some plain text.
+
+	Similar to before there is an array of 4 arrays, one for each column. Each array contains the total list of notes that will appear in that column throughout
+	the duration of the song; Similar to before they will be sorted backwards so earliest goes later in the array. Also similar to before the first index is
+	reserved, and is equal to when the array was last popped(), sometimes it is set to null which will discuss below. The array also will not contain any
+	sustain notes.
+
+	Every frame the game will check if the first index in the array is set to null, if it is then it will pop() the array and set the first index to what it
+	ended up popping. And that is the now the 'active' note. While there is an active note the array cannot have a pop() be called on it. This means that it's
+	impossible to set the note to a later one in that column, unless the first index is set to null, which can happpen under a variety of scenarios.
+
+	Said scenarios are if the note gets hit, or gets missed. Opponent notes have no influence on the input.
+
+	So here is the first example where the first index is null and we have five notes in the right column waiting to be hit.
+	I've also labled the notes so that way we do not get confused here.
+	[ , →5, →4, →3, →2, →1]
+
+	Once that last note is in range to be hit, the first index is set to the array getting popped.
+	[→1, →5, →4, →3, →2]
+
+	When we hit that note the array becomes this:
+	[ , →5, →4, →3, →2]
+
+	Then when that last note is in range to be hit it becomes this:
+	[→2, →5, →4, →3]
+
+	We rinse and repeat this process until the array is empty. This has benefits such as forcing the input to work correctly, is actually less error-prone.
+	Because it will always force us to check for the earliest note in the song (for that column) to be hit. I wouldn't call it 'faster' though, it is way more complex.
+
+	This whole system has bugs that I'm already aware of:
+	- Game crashing near the end of test song
+	- Missing sustain notes sometimes causes them to get stuck
+	- Multiple NPCs with notes at the same time will bug out and behave incorrectly
+	- It is only 2028 NANO seconds faster
+
+	But these may or may not be fixed, no one under ANY circumstance should be using this fork of Assorion.
+*/
+
 #if !debug @:noDebug #end
 class PlayState extends MusicBeatState
 {
@@ -46,11 +126,30 @@ class PlayState extends MusicBeatState
 	public var strumLineY:Int;
 	public var vocals:FlxSound;
 	public var followPos:FlxObject;
-	public var unspawnNotes:Array<Note> = [];
 
 	public var strumLineNotes:FlxTypedGroup<StrumNote>;
 	public var playerStrums:Array<StrumNote> = [];
-	public var notes:FlxTypedGroup<Note>;
+
+	// All note / input stuff
+	public var totalNotes:FlxTypedGroup<Note>;
+	public var opponentNotes:Array<Array<Dynamic>> = [
+		[],
+		[],
+		[],
+		[]
+	];
+	public var playerNotes:Array<Array<Dynamic>> = [
+		[],
+		[],
+		[],
+		[]
+	];
+	public var playerNoteTimings:Array<Array<Note>> = [
+		[],
+		[],
+		[],
+		[]
+	];
 
 	// health now goes from 0 - 100, instead of 0 - 2
 	public var health   :Int = 50;
@@ -124,11 +223,11 @@ class PlayState extends MusicBeatState
 		playerPos = SONG.activePlayer;
 		handleStage();
 
-		strumLineY = Settings.pr.downscroll ? FlxG.height - 150 : 50;
+		strumLineY = Settings.downscroll ? FlxG.height - 150 : 50;
 		strumLineNotes = new FlxTypedGroup<StrumNote>();
-		notes = new FlxTypedGroup<Note>();
+		totalNotes     = new FlxTypedGroup<Note>();
 		add(strumLineNotes);
-		add(notes);
+		add(totalNotes);
 
 		generateChart();
 		for(i in 0...SONG.playLength)
@@ -159,7 +258,7 @@ class PlayState extends MusicBeatState
 		}
 
 		// # UI Setup
-		var baseY:Int = Settings.pr.downscroll ? 80 : 650;
+		var baseY:Int = Settings.downscroll ? 80 : 650;
 
 		healthBarBG = new StaticSprite(0, baseY).loadGraphic(Paths.lImage('gameplay/healthBar'));
 		healthBarBG.screenCenter(X);
@@ -182,8 +281,8 @@ class PlayState extends MusicBeatState
 
 		// # Add to cameras
 		strumLineNotes.cameras = [camHUD];
-		notes.cameras          = [camHUD];
-		if(Settings.pr.show_hud){
+		totalNotes.cameras     = [camHUD];
+		if(Settings.show_hud){
 			add(healthBarBG);
 			add(healthBar);
 			add(scoreTxt);
@@ -197,7 +296,7 @@ class PlayState extends MusicBeatState
 			scoreTxt.cameras = [camHUD];
 		}
 
-		stepTime = -16 - (((SONG.beginTime * 1000) + Settings.pr.audio_offset) * Song.Division);
+		stepTime = -16 - (((SONG.beginTime * 1000) + Settings.audio_offset) * Song.Division);
 		updateHealth(0);
 
 		super.create();
@@ -267,18 +366,32 @@ class PlayState extends MusicBeatState
 				var newNote = new Note(time, noteData, ntype, false, false);
 				newNote.scrollFactor.set();
 				newNote.player = player;
-				unspawnNotes.push(newNote);
+
+				if(newNote.player == playerPos){
+					playerNotes      [newNote.noteData].insert(0, newNote);
+					playerNoteTimings[newNote.noteData].insert(0, newNote);
+				} else
+					opponentNotes[newNote.noteData].insert(0, newNote);
 
 				if(susLength > 1)
 					for(i in 0...susLength+1){
 						var susNote = new Note(time + i + 0.5, noteData, ntype, true, i == susLength);
 						susNote.scrollFactor.set();
 						susNote.player = player;
-						unspawnNotes.push(susNote);
+
+						(susNote.player == playerPos ? playerNotes : opponentNotes)[susNote.noteData].insert(0, susNote);
 					}
 			}
-
-		unspawnNotes.sort((A,B) -> Std.int(A.strumTime - B.strumTime));
+		
+		for(i in 0...Note.keyCount){
+			opponentNotes    [i].sort((A,B) -> Std.int(B.strumTime - A.strumTime));
+			playerNotes      [i].sort((A,B) -> Std.int(B.strumTime - A.strumTime));
+			playerNoteTimings[i].sort((A,B) -> Std.int(B.strumTime - A.strumTime));
+			
+			opponentNotes[i]    .insert(0, cast(1, Int));
+			playerNotes[i]      .insert(0, cast(1, Int));
+			playerNoteTimings[i].insert(0, null);
+		}
 	}
 
 	private function generateStrumArrows(player:Int, playable:Bool):Void
@@ -324,7 +437,7 @@ class PlayState extends MusicBeatState
 			if(swagCounter >= 4){
 				FlxG.sound.music.play();
 				FlxG.sound.music.volume = 1;
-				Song.Position = -Settings.pr.audio_offset;
+				Song.Position = -Settings.audio_offset;
 
 				vocals.play();
 				vocals.time = FlxG.sound.music.time = 0;
@@ -334,7 +447,7 @@ class PlayState extends MusicBeatState
 				pc.dance();
 
 			stepTime = (swagCounter - 4) * 4;
-			stepTime -= Settings.pr.audio_offset * Song.Division;
+			stepTime -= Settings.audio_offset * Song.Division;
 
 			introSounds[swagCounter].play();
 			if(introSprites[swagCounter] != null)
@@ -343,10 +456,9 @@ class PlayState extends MusicBeatState
 			swagCounter++;
 		}
 		for(i in 0...5)
-			postEvent(((Song.Crochet * (i + 1)) + Settings.pr.audio_offset) * 0.001, countTickFunc);
+			postEvent(((Song.Crochet * (i + 1)) + Settings.audio_offset) * 0.001, countTickFunc);
 	}
 
-	var noteCount:Int = 0;
 	override public function update(elapsed:Float) if(!paused) {
 		var scaleVal = CoolUtil.boundTo(iconP1.scale.x - (elapsed * 2), 1, 1.2);
 		iconP1.scale.set(scaleVal, scaleVal);
@@ -355,10 +467,82 @@ class PlayState extends MusicBeatState
 		if(seenCutscene)
 			stepTime += (elapsed * 1000) * Song.Division;
 
-		if (unspawnNotes[noteCount] != null && unspawnNotes[noteCount].strumTime - stepTime < 32)
-			notes.add(unspawnNotes[noteCount++]);
+		// All this is to handle everything to do with notes
+		for(i in 0...Note.keyCount){
+			// Note spawning:
+			var noteSet = opponentNotes[i];
+			var window:Int = noteSet[0];
 
-		notes.forEachAlive(scrollNotes);
+			if (noteSet.length != 1 && noteSet[noteSet.length - window].strumTime - stepTime < 16){
+				totalNotes.add(noteSet[noteSet.length - window]);
+				++noteSet[0];
+			}
+
+			noteSet = playerNotes[i];
+			window = noteSet[0];
+			if(noteSet.length != 1 && noteSet[noteSet.length - window].strumTime - stepTime < 16){
+				totalNotes.add(noteSet[noteSet.length - window]);
+				++noteSet[0];
+			}
+
+			// Input checks:
+			noteSet = playerNoteTimings[i];
+			if(noteSet.length != 1)
+				if(noteSet[noteSet.length - 1].strumTime - stepTime < inputRange && noteSet[0] == null /*|| playerNoteTimings[i][0].strumTime - stepTime <= -inputRange)*/)
+					noteSet[0] = noteSet.pop();
+
+			// Player note handling:
+			var len:Int = playerNotes[i].length - 1;
+			for(m in 0...window-1){
+				var daNote:Note = playerNotes[i][len - m];
+				var nDiff:Float = stepTime - daNote.strumTime;
+				var strumRef = playerStrums[i];
+
+				daNote.y = (Settings.downscroll ? 45 : -45) * nDiff * SONG.speed;
+				daNote.y += strumRef.y + daNote.offsetY;
+				daNote.x = strumRef.x + daNote.offsetX;
+				daNote.angle = strumRef.angle;
+
+				if(nDiff > inputRange){
+					if(daNote.curType.mustHit)
+						missNote(i);
+
+					destroyNote(daNote, 1);
+					continue;
+				}
+
+				if(daNote.isSustainNote && Math.abs(nDiff) < 0.8 && keysPressed[i]){
+					hitNote(daNote);
+					destroyNote(daNote, 0);
+				}
+			}
+
+			//Opponent note handling:
+			len = opponentNotes[i].length - 1;
+			window = opponentNotes[i][0];
+
+			for(m in 0...window-1){
+				var daNote:Note = opponentNotes[i][len - m];
+				var nDiff:Float = stepTime - daNote.strumTime;
+				var strumRef = strumLineNotes.members[i + (Note.keyCount * daNote.player)];
+
+				daNote.y = (Settings.downscroll ? 45 : -45) * nDiff * SONG.speed;
+				daNote.y += strumRef.y + daNote.offsetY;
+				daNote.x = strumRef.x + daNote.offsetX;
+				daNote.angle = strumRef.angle;
+
+				if(stepTime >= daNote.strumTime && daNote.curType.mustHit){
+					allCharacters[daNote.player].playAnim('sing' + sDir[i]);
+					strumRef.playAnim(2);
+					strumRef.pressTime = Song.StepCrochet * 0.001;
+					vocals.volume = 1;
+		
+					--opponentNotes[i][0];
+					opponentNotes[i].pop();
+					totalNotes.remove(daNote);
+				}
+			}
+		}
 
 		super.update(elapsed);
 	}
@@ -398,7 +582,7 @@ class PlayState extends MusicBeatState
 
 	private static inline var iconSpacing:Int = 52;
 	public function updateHealth(change:Int) {
-		if(Settings.pr.botplay)
+		if(Settings.botplay)
 			scoreTxt.text = 'Botplay';
 		else {
 			var fcText:String = ['?', 'SFC', 'GFC', 'FC', '(Bad) FC', 'SDCB', 'Clear'][fcValue];
@@ -425,8 +609,6 @@ class PlayState extends MusicBeatState
 	}
 
 	function hitNote(note:Note):Void {
-		destroyNote(note, 0);
-
 		if(!note.curType.mustHit){
 			missNote(note.noteData);
 			return;
@@ -460,33 +642,35 @@ class PlayState extends MusicBeatState
 
 	// For anything that would require keyboard input, please put it here, not update.
 
-	public var hittableNotes:Array<Note> = [null, null, null, null];
+	//public var hittableNotes:Array<Note> = [null, null, null, null];
 	public var keysPressed:Array<Bool>   = [false, false, false, false];
 	public var keysArray:Array<Array<Int>> = [Binds.NOTE_LEFT, Binds.NOTE_DOWN, Binds.NOTE_UP, Binds.NOTE_RIGHT];
-	override function keyHit(ev:KeyboardEvent) if(!paused) {
+	override function keyHit(KC:KeyCode, mod:KeyModifier) if(!paused) {
 		// Assorions "Fast" input system
-		var nkey = ev.keyCode.deepCheck(keysArray);
-		if(nkey >= 0 && !keysPressed[nkey] && !Settings.pr.botplay){
+		var nkey = KC.deepCheck(keysArray);
+		if(nkey >= 0 && !keysPressed[nkey] && !Settings.botplay){
 			var strumRef = playerStrums[nkey];
 			keysPressed[nkey] = true;
 			
-			if(hittableNotes[nkey] != null){
-				hitNote(hittableNotes[nkey]);
+			if(playerNoteTimings[nkey][0] != null){
+				hitNote(playerNoteTimings[nkey][0]);
+				destroyNote(playerNoteTimings[nkey][0], 0);
+
 				strumRef.pressTime = Song.StepCrochet * 0.00075;
 			} else if(strumRef.pressTime <= 0){
 				strumRef.playAnim(1);
-				if(!Settings.pr.ghost_tapping)
+				if(!Settings.ghost_tapping)
 					missNote(nkey);
 			}
 
 			return;
 		}
 
-		var k = ev.keyCode.deepCheck([Binds.UI_ACCEPT, Binds.UI_BACK, [FlxKey.SEVEN], [FlxKey.F12] ]);
+		var k = KC.deepCheck([Binds.UI_ACCEPT, Binds.UI_BACK, [FlxKey.SEVEN], [FlxKey.F12] ]);
 		
 		switch(k){
 			case 0, 1:
-				if(seenCutscene)	
+				if(seenCutscene)
 					pauseAndOpenState(new PauseSubState(camHUD, this));
 			case 2:
 				MusicBeatState.changeState(new ChartingState());
@@ -495,59 +679,13 @@ class PlayState extends MusicBeatState
 				misc.Screenshot.takeScreenshot();
 		}
 	}
-	override public function keyRel(ev:KeyboardEvent) {
-		var nkey = ev.keyCode.deepCheck(keysArray);
+	override public function keyRel(KC:KeyCode, mod:KeyModifier) {
+		var nkey = KC.deepCheck(keysArray);
 		if (nkey == -1 || paused) 
 			return;
 
 		keysPressed[nkey] = false;
 		playerStrums[nkey].playAnim();
-	}
-
-	private inline function scrollNotes(daNote:Note) {
-		var nDiff:Float = stepTime - daNote.strumTime;
-		daNote.y = (Settings.pr.downscroll ? 45 : -45) * nDiff * SONG.speed;
-		daNote.y += strumLineY + daNote.offsetY;
-
-		daNote.visible = Settings.pr.downscroll ? (daNote.y >= -daNote.height * daNote.scale.y) : (daNote.y <= FlxG.height);
-		if(!daNote.visible) 
-			return;
-		
-		var strumRef = strumLineNotes.members[daNote.noteData + (Note.keyCount * daNote.player)];
-		if((daNote.player != playerPos || Settings.pr.botplay) && stepTime >= daNote.strumTime && daNote.curType.mustHit){
-			allCharacters[daNote.player].playAnim('sing' + sDir[daNote.noteData]);
-			strumRef.playAnim(2);
-			strumRef.pressTime = Song.StepCrochet * 0.001;
-			vocals.volume = 1;
-
-			notes.remove(daNote, true);
-			daNote.destroy();
-
-			return;
-		}
-
-		daNote.x = strumRef.x + daNote.offsetX;
-		daNote.angle = strumRef.angle;
-
-		if(daNote.player != playerPos || Settings.pr.botplay) 
-			return;
-
-		if(nDiff > inputRange){
-			if(daNote.curType.mustHit)
-				missNote(daNote.noteData);
-			
-			destroyNote(daNote, 1);
-			return;
-		}
-
-		// Input stuff
-		if (hittableNotes[daNote.noteData] == null && !daNote.isSustainNote && Math.abs(nDiff) <= inputRange * daNote.curType.rangeMul){
-			hittableNotes[daNote.noteData] = daNote;
-			return;
-		}
-
-		if(daNote.isSustainNote && Math.abs(nDiff) < 0.8 && keysPressed[daNote.noteData])
-			hitNote(daNote);
 	}
 
 	public static var possibleScores:Array<RatingData> = [
@@ -581,7 +719,7 @@ class PlayState extends MusicBeatState
 	private var comboSprs:Array<StaticSprite> = [];
 	private var scoreTweens:Array<FlxTween> = [];
 	private inline function popUpScore(strumtime:Float):Void {
-		var noteDiff:Float = Math.abs(strumtime - (stepTime - (Settings.pr.input_offset * Song.Division)));
+		var noteDiff:Float = Math.abs(strumtime - (stepTime - (Settings.input_offset * Song.Division)));
 		var pscore:RatingData = null;
 
 		for(i in 0...possibleScores.length)
@@ -657,11 +795,13 @@ class PlayState extends MusicBeatState
 
 	inline function destroyNote(note:Note, act:Int) {
 		note.typeAction(act);
-		notes.remove(note, true);
-		note.destroy();
+		
+		--playerNotes[note.noteData][0];
+		playerNotes[note.noteData].pop();
+		totalNotes.remove(note);
 
-		if (hittableNotes[note.noteData] == note)
-			hittableNotes[note.noteData] = null;
+		playerNoteTimings[note.noteData][0] = null;
+		note.destroy();
 	}
 
 	private inline function introSpriteTween(spr:StaticSprite, steps:Int, delay:Float = 0, destroy:Bool):FlxTween {

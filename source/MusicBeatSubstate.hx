@@ -3,6 +3,7 @@ package;
 import flixel.FlxG;
 import flixel.FlxSubState;
 import MusicBeatState.DelayedEvent;
+import lime.app.Application;
 
 #if !debug @:noDebug #end
 class MusicBeatSubstate extends FlxSubState
@@ -20,20 +21,20 @@ class MusicBeatSubstate extends FlxSubState
 
 	// # new input thing.
 
-	public function keyHit(ev:KeyboardEvent){}
-	public function keyRel(ev:KeyboardEvent){}
+	public function keyHit(KC:KeyCode, mod:KeyModifier){}
+	public function keyRel(KC:KeyCode, mod:KeyModifier){}
 
 	override function create()
 	{
-		FlxG.stage.addEventListener(KeyboardEvent.KEY_DOWN, keyHit);
-		FlxG.stage.addEventListener(KeyboardEvent.KEY_UP  , keyRel);
+		Application.current.window.onKeyDown.add(keyHit);
+		Application.current.window.onKeyUp.add(keyRel);
 
 		super.create();
 	}
 
 	override function destroy(){
-		FlxG.stage.removeEventListener(KeyboardEvent.KEY_DOWN, keyHit);
-		FlxG.stage.removeEventListener(KeyboardEvent.KEY_UP  , keyRel);
+		Application.current.window.onKeyDown.remove(keyHit);
+		Application.current.window.onKeyUp.remove(keyRel);
 
 		super.destroy();
 	}

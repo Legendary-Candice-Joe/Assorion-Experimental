@@ -156,8 +156,8 @@ class MenuTemplate extends MusicBeatState {
 
     // # Input code
 
-    override function keyHit(ev:KeyboardEvent){
-        var button = ev.keyCode.deepCheck([Binds.UI_U, Binds.UI_D, Binds.UI_L, Binds.UI_R, Binds.UI_BACK]);
+    override function keyHit(KC:KeyCode, mod:KeyModifier){
+        var button = KC.deepCheck([Binds.UI_U, Binds.UI_D, Binds.UI_L, Binds.UI_R, Binds.UI_BACK]);
 
         if(button == -1) 
             return;

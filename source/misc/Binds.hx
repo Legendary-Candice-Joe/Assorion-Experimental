@@ -21,16 +21,16 @@ class Binds {
     // # Used in settings.
 
     public inline static function updateControls(){
-        NOTE_LEFT  = Settings.pr.note_left;
-        NOTE_DOWN  = Settings.pr.note_down;
-        NOTE_UP    = Settings.pr.note_up;
-        NOTE_RIGHT = Settings.pr.note_right;
-        UI_L       = Settings.pr.ui_left;
-        UI_D       = Settings.pr.ui_down;
-        UI_U       = Settings.pr.ui_up;
-        UI_R       = Settings.pr.ui_right;
-        UI_ACCEPT  = Settings.pr.ui_accept;
-        UI_BACK    = Settings.pr.ui_back;
+        NOTE_LEFT  = Settings.note_left;
+        NOTE_DOWN  = Settings.note_down;
+        NOTE_UP    = Settings.note_up;
+        NOTE_RIGHT = Settings.note_right;
+        UI_L       = Settings.ui_left;
+        UI_D       = Settings.ui_down;
+        UI_U       = Settings.ui_up;
+        UI_R       = Settings.ui_right;
+        UI_ACCEPT  = Settings.ui_accept;
+        UI_BACK    = Settings.ui_back;
     }
 
     // # for checking only 2 binds.

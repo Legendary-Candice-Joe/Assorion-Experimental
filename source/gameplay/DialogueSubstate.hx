@@ -197,17 +197,17 @@ class DialogueSubstate extends MusicBeatSubstate {
         if(boxSpr.alpha < 1)
             boxSpr.alpha = CoolUtil.boundTo(boxSpr.alpha + (elapsed * 2), 0, 1);
     }
-    override function keyHit(ev:KeyboardEvent){
+    override function keyHit(keyCode:KeyCode, mod:KeyModifier){
         if(leaving) 
             return;
 
-        if(ev.keyCode.hardCheck(Binds.UI_ACCEPT) && boxSpr.alpha == 1){
+        if(keyCode.hardCheck(Binds.UI_ACCEPT) && boxSpr.alpha == 1){
             textSlide();
             FlxG.sound.play(Paths.lSound('ui/clickText'));
             return;
         }
 
-        if(!ev.keyCode.hardCheck(Binds.UI_BACK)) 
+        if(!keyCode.hardCheck(Binds.UI_BACK)) 
             return;
 
         exit();

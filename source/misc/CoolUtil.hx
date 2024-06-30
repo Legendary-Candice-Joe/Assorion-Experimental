@@ -63,6 +63,6 @@ class CoolUtil
 		MusicBeatState.changeState(PlayState.storyWeek >= 0 ? new ui.StoryMenuState() : new ui.FreeplayState());
 	}
 	public static function newCanvas(force:Bool = false)
-	if (canvas == null || !Settings.pr.default_persist || force)
+	if (canvas == null || !Settings.default_persist || force)
 		canvas = new BitmapData(1280, 720, true, 0);
 }

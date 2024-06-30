@@ -5,9 +5,26 @@ import flixel.FlxG;
 import flixel.FlxSubState;
 import flixel.FlxState;
 import flixel.addons.ui.FlxUIState;
-import openfl.events.KeyboardEvent;
+import lime.app.Application;
 
 import ui.NewTransition;
+
+/*
+	Key handling experimental change. Instead of using OpenFL keyboard events, we use Lime's input events directly.
+	Lime input events are a little different to OpenFLs but for the most part they are a drop-in replacement.
+
+	I won't go in to much detail but I'll talk about benefits and downsides.
+	
+	Benefits:
+	- Slightly more responsive (but it's very hard to tell the difference)
+	- Allows for more advanced key detection, E.G: left and right ctrl are separate
+	- Can use the key code directly without having to reference the event.
+
+	Downsides:
+	- All the key codes are different. Meaning I have to redo the settings texts in the Settings.hx file
+	- You have to reference KeyCode.<Key> for key detection instead of FlxKey (major change)
+	- Despite what was said earlier, it isn't exactly a drop-in replacement and a lot of code has to change.
+*/
 
 typedef DelayedEvent = {
 	var endTime:Float;
@@ -38,20 +55,21 @@ class MusicBeatState extends FlxUIState
 
 		persistentUpdate = true;
 		FlxG.camera.bgColor.alpha = 0;
-		FlxG.stage.addEventListener(KeyboardEvent.KEY_DOWN, keyHit);
-		FlxG.stage.addEventListener(KeyboardEvent.KEY_UP  , keyRel);
+
+		Application.current.window.onKeyDown.add(keyHit);
+		Application.current.window.onKeyUp.add(keyRel);
 
 		super.create();
 	}
 
 	// # Input code
 
-	public function keyHit(ev:KeyboardEvent){}
-	public function keyRel(ev:KeyboardEvent){}
+	public function keyHit(KC:KeyCode, mod:KeyModifier){}
+	public function keyRel(KC:KeyCode, mod:KeyModifier){}
 
 	override function destroy(){
-		FlxG.stage.removeEventListener(KeyboardEvent.KEY_DOWN, keyHit);
-		FlxG.stage.removeEventListener(KeyboardEvent.KEY_UP  , keyRel);
+		Application.current.window.onKeyDown.remove(keyHit);
+		Application.current.window.onKeyUp.remove(keyRel);
 
 		super.destroy();
 	}
@@ -64,7 +82,7 @@ class MusicBeatState extends FlxUIState
 
 	override function update(elapsed:Float)
 	{
-		Song.Position = FlxG.sound.music.time - Settings.pr.audio_offset;
+		Song.Position = FlxG.sound.music.time - Settings.audio_offset;
 
 		var newStep = Math.floor(Song.Position * Song.Division);
 		if (curStep != newStep && (curStep = newStep) >= -1)

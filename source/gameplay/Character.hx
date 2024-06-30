@@ -38,7 +38,7 @@ class Character extends FlxSprite
 	{
 		super(x, y);
 
-		antialiasing  = Settings.pr.antialiasing;
+		antialiasing  = Settings.antialiasing;
 		animOffsets   = new Map<String, Array<Int>>();
 		curCharacter  = character;
 		this.isPlayer = isPlayer;

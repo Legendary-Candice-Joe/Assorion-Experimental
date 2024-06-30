@@ -14,15 +14,15 @@ import misc.MenuTemplate;
 #if !debug @:noDebug #end
 class ControlsState extends MenuTemplate {
 	var controlList:Array<String> = [
+        'ui_down',
+        'ui_up',
+        'ui_left',
+        'ui_right',
+        '',
         'note_left',
         'note_down',
         'note_up',
         'note_right',
-        '',
-        'ui_left',
-        'ui_down',
-        'ui_up',
-        'ui_right',
         '',
         'ui_accept',
         'ui_back'
@@ -49,7 +49,7 @@ class ControlsState extends MenuTemplate {
             var s2r:String = '';
 
             if(controlList[i] != ''){
-                var val:Dynamic = Reflect.field(Settings.pr, controlList[i]);
+                var val:Dynamic = Reflect.field(Settings, controlList[i]);
                 str = misc.InputString.getKeyNameFromString(val[0], false, false);
                 s2r = misc.InputString.getKeyNameFromString(val[1], false, false);
             }
@@ -71,16 +71,6 @@ class ControlsState extends MenuTemplate {
             dontCancel = false;
             return;
         }
-
-        var k:Int = FlxG.keys.firstJustPressed();
-        var original:Dynamic = Reflect.field(Settings.pr, controlList[curSel]);
-            original[curAlt] = k;
-        Reflect.setField(Settings.pr, '${controlList[curSel]}', original);
-
-        rebinding = false;
-        createNewList();
-
-        trace(k);
     }
 
 	override public function exitFunc(){
@@ -98,13 +88,25 @@ class ControlsState extends MenuTemplate {
 		super.changeSelection(to);
 	}
 
-	override public function keyHit(ev:KeyboardEvent){
-		if(rebinding) 
+	override public function keyHit(KC:KeyCode, mod:KeyModifier){
+		if(rebinding){
+            var k:Int = KC;
+            var original:Dynamic = Reflect.field(Settings, controlList[curSel]);
+                original[curAlt] = k;
+
+            Reflect.setField(Settings, '${controlList[curSel]}', original);
+    
+            rebinding = false;
+            createNewList();
+
+            trace(k);
+
             return;
+        }
 
-        super.keyHit(ev);
+        super.keyHit(KC, mod);
 
-		if(!ev.keyCode.hardCheck(Binds.UI_ACCEPT) || controlList[curSel] == '') 
+		if(!KC.hardCheck(Binds.UI_ACCEPT) || controlList[curSel] == '') 
             return;
 
 		for(i in 0...arrGroup.length)
